@@ -18,7 +18,8 @@ module ActiveAdminImport
       :headers_rewrites,
       :batch_size,
       :batch_transaction,
-      :csv_options
+      :csv_options,
+      :recursive
     ].freeze
 
     def initialize(resource, model, options)
@@ -57,7 +58,8 @@ module ActiveAdminImport
         :ignore,
         :timestamps,
         :batch_transaction,
-        :batch_size
+        :batch_size,
+        :recursive
       )
     end
 
@@ -142,7 +144,11 @@ module ActiveAdminImport
       batch_result = nil
       @resource.transaction do
         run_callback(:before_batch_import)
-        batch_result = resource.import(headers.values, csv_lines, import_options)
+        if import_options.key?(:recursive) && import_options[:recursive]
+          batch_result = resource.import(csv_lines, import_options)
+        else
+          batch_result = resource.import(headers.values, csv_lines, import_options)
+        end
         raise ActiveRecord::Rollback if import_options[:batch_transaction] && batch_result.failed_instances.any?
         run_callback(:after_batch_import)
       end
